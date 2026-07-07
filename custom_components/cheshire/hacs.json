@@ -2,5 +2,6 @@
   "name": "Cheshire BLE Lights",
   "homeassistant": "2024.1.0",
   "render_readme": true,
-  "country": []
+  "country": [],
+  "description": "Control Keepsmile and compatible BLE LED strip lights via Bluetooth."
 }
