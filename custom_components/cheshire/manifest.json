@@ -11,10 +11,10 @@
   ],
   "config_flow": true,
   "dependencies": ["bluetooth_adapters"],
-  "documentation": "https://github.com/themooer1/cheshire_homeassistant",
+  "documentation": "https://github.com/themooer1/cheshire-homeassistant",
   "integration_type": "device",
   "iot_class": "local_polling",
   "requirements": ["cheshire"],
   "version": "0.1.2",
-  "codeowners": []
+  "codeowners": ["themooer1"]
 }

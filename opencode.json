@@ -5,5 +5,19 @@
       "description": "Efficient subagent for building and testing code. Executes tasks with minimal token usage.",
       "mode": "subagent"
     }
+  },
+  "plugin": [
+    "opencode-browser"
+  ],
+  "mcp": {
+    "browsermcp": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@browsermcp/mcp@0.1.3"
+      ],
+      "enabled": true
+    }
   }
 }

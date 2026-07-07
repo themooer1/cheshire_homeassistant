@@ -5,7 +5,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from bleak import BleakClient
 from bleak.backends.device import BLEDevice
+from bleak_retry_connector import establish_connection
 from cheshire.compiler.state import LightState
 from cheshire.generic.command import (
     BrightnessCommand,
@@ -14,7 +16,7 @@ from cheshire.generic.command import (
     SwitchCommand,
 )
 from cheshire.generic.effect import Effect
-from cheshire.hal.devices import device_profile_from_ble_device
+from cheshire.hal.devices import Connection, device_profile_from_ble_device
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -28,6 +30,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from . import CheshireConfigEntry
 from .const import DOMAIN, EFFECTS
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,7 +50,7 @@ EFFECT_MAP_REVERSE = {v: k for k, v in EFFECT_MAP.items()}
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: Any,
+    entry: CheshireConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the light platform for Cheshire BLE."""
@@ -56,7 +59,7 @@ async def async_setup_entry(
     address: str = data["address"]
 
     async_add_entities(
-        [CheshireLight(ble_device, address, entry.title, entry.entry_id)]
+        [CheshireLight(hass, ble_device, address, entry.title, entry.entry_id)]
     )
 
 
@@ -65,6 +68,7 @@ class CheshireLight(LightEntity):
 
     _attr_has_entity_name = True
     _attr_name = None
+    _attr_should_poll = False
     _attr_supported_color_modes = {ColorMode.RGB}
     _attr_color_mode = ColorMode.RGB
     _attr_supported_features = LightEntityFeature.EFFECT
@@ -72,12 +76,15 @@ class CheshireLight(LightEntity):
 
     def __init__(
         self,
+        hass: HomeAssistant,
         ble_device: BLEDevice,
         address: str,
         name: str,
         entry_id: str,
     ) -> None:
         """Initialize the light."""
+        self._hass = hass
+        self._entry_id = entry_id
         self._ble_device = ble_device
         self._address = address
         self._attr_unique_id = address
@@ -94,13 +101,14 @@ class CheshireLight(LightEntity):
         self._attr_effect = None
 
     def _get_ble_device(self) -> BLEDevice:
-        """Get the latest BLE device reference."""
-        # The BLE device reference is updated by the callback in __init__.py
-        # For now, return the stored reference
+        """Get the latest BLE device reference from HA's bluetooth manager."""
+        data = self._hass.data[DOMAIN].get(self._entry_id)
+        if data and data.get("ble_device"):
+            self._ble_device = data["ble_device"]
         return self._ble_device
 
     async def _send_state(self, state: LightState) -> None:
-        """Connect to device, send state, disconnect."""
+        """Connect to device via HA's bluetooth manager, send state, disconnect."""
         ble_device = self._get_ble_device()
         profile = device_profile_from_ble_device(ble_device)
         if profile is None:
@@ -109,9 +117,16 @@ class CheshireLight(LightEntity):
             )
             return
 
-        connection = None
+        connection: Connection | None = None
+        client: BleakClient | None = None
         try:
-            connection = await profile.connect(ble_device)
+            client = await establish_connection(
+                BleakClient,
+                ble_device,
+                name=self._attr_device_info.get("name", self._address),
+            )
+            transmitter = profile.get_transmitter(client)
+            connection = Connection(profile.compiler(), transmitter)
             await connection.apply(state)
         except Exception as ex:
             _LOGGER.error(

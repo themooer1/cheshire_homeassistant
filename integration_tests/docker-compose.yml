@@ -1,0 +1,44 @@
+# Docker Compose for Cheshire HA Integration Testing
+#
+# Runs Home Assistant in a container with bluetooth access and mounts the
+# custom_components folder from the repo. Use this if you prefer containerized
+# testing over the local HA core checkout.
+#
+# Usage:
+#   podman compose -f integration_tests/docker-compose.yml up -d
+#   # wait for HA to boot, then run onboarding + tests:
+#   agent_tools/.venv/bin/python integration_tests/onboard_ha.py http://localhost:8123
+#   # ... then run test_light_via_ha.py with the token
+#
+# Bluetooth: the container needs the host's bluetooth adapter. This requires
+# running privileged or with the right capabilities + dbus mount. On Linux:
+#   --privileged  (simplest)  OR  --cap-add NET_ADMIN --cap-add NET_RAW
+#   plus mounting /var/run/dbus and /dev/hci0
+#
+# Note: cheshire must be available to HA. Since it's not on PyPI, either:
+#   - build a custom HA image that pip-installs cheshire from a local path, or
+#   - mount the cheshire source into the container and add it to PYTHONPATH.
+# The compose file below mounts the cheshire source into /usr/src/cheshire and
+# sets PYTHONPATH so HA can import it.
+
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: cheshire-ha-test
+    privileged: true
+    network_mode: host
+    volumes:
+      # HA config dir (persists state between restarts)
+      - ./ha_config:/config
+      # Mount our custom integration from the repo
+      - ../custom_components:/config/custom_components
+      # Mount the cheshire library source so HA can import it
+      - /home/user/projects/cheshire:/usr/src/cheshire:ro
+      # Bluetooth: pass through the adapter and dbus
+      - /var/run/dbus:/var/run/dbus
+      - /dev/hci0:/dev/hci0
+    environment:
+      - PYTHONPATH=/usr/src/cheshire
+    devices:
+      - /dev/hci0:/dev/hci0
+    restart: unless-stopped
