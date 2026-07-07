@@ -6,7 +6,6 @@ import asyncio
 import logging
 
 from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import BluetoothReachabilityIntent
 from homeassistant.components.bluetooth.match import ADDRESS, BluetoothCallbackMatcher
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, Platform
@@ -31,8 +30,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: CheshireConfigEntry) -> 
     )
     if not ble_device:
         raise ConfigEntryNotReady(
-            f"Could not find Cheshire BLE device with address {address}: "
-            f"{bluetooth.async_address_reachability_diagnostics(hass, address.upper(), BluetoothReachabilityIntent.CONNECTION)}"
+            f"Could not find Cheshire BLE device with address {address}. "
+            "Make sure the device is powered on and in range."
         )
 
     # Store the BLE device reference; the light entity will use it directly

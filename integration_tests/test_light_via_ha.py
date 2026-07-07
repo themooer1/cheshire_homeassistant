@@ -97,7 +97,10 @@ def turn_off():
 def read_webcam_color():
     cmd = [VENV_PYTHON, WEBCAM_SCRIPT, str(CAMERA)]
     for attempt in range(RETRY_READS + 1):
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        except subprocess.TimeoutExpired:
+            continue
         if result.returncode != 0:
             continue
         out = result.stdout.strip()
