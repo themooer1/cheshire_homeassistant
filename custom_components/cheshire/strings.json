@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "address": "Bluetooth Device"
+        },
+        "description": "Select your Cheshire BLE light from the discovered devices."
+      }
+    },
+    "abort": {
+      "already_configured": "This device is already configured.",
+      "no_devices_found": "No Cheshire BLE devices found. Make sure your device is powered on and in range.",
+      "not_supported": "This device is not supported."
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the device. Please try again.",
+      "unknown": "An unexpected error occurred."
+    }
+  }
+}
